@@ -1253,10 +1253,25 @@
                 console.warn("Could not read webhook from storage:", err);
             }
 
-            let reportPortalUrl = getDirectReportURL();
+            // Ensure base clean URL is established
+            let baseCleanUrl = "https://mfreeman90.github.io/lasd-reports/";
+            try {
+                baseCleanUrl = window.location.href.split('?')[0].split('#')[0];
+            } catch (e) {}
+
+            // FIX: Use Cloud ID URL for Discord link so it never hits character limits or breaks
+            let validUrl = baseCleanUrl;
+            if (cloudDocId) {
+                validUrl = `${baseCleanUrl}?cloudId=${cloudDocId}`;
+            } else {
+                let reportPortalUrl = getDirectReportURL();
+                if (reportPortalUrl && reportPortalUrl.length <= 2000) {
+                    validUrl = reportPortalUrl;
+                }
+            }
 
             // Update Browser Address Bar Safely
-            safeUpdateHistoryState(reportPortalUrl);
+            safeUpdateHistoryState(validUrl);
 
             // Helper function to guarantee non-empty string for Discord embed fields
             const sanitize = (val, fallback = "N/A", maxLen = 1000) => {
@@ -1279,7 +1294,7 @@
                 const sDemo = sanitize(demo, "N/A", 100);
                 const sPhone = sanitize(phone, "N/A", 50);
                 
-                personsSummary += `• **[${type}]** ${sName} (${sDemo}) | Ph: ${sPhone}\n`;
+                personsSummary += `• **[${type}]**${sName} (${sDemo}) \vert{} Ph:${sPhone}\n`;
             });
 
             const urn = sanitize(document.getElementById('urn-display')?.value, "UNASSIGNED", 50);
@@ -1312,22 +1327,10 @@
             const supervisor = sanitize(document.getElementById('approving-supervisor')?.value, "Unspecified", 100);
 
             const pSummaryFormatted = sanitize(personsSummary, "None specified.", 1000);
-            const locationFormatted = sanitize(`${address}, ${city} ${zip}\n*(${premise})*`, "Unspecified", 1000);
-
-            // Ensure URL is a base clean HTTP/HTTPS protocol string for Discord embed validation (max 2048 chars)
-            let baseCleanUrl = "https://mfreeman90.github.io/lasd-reports/";
-            try {
-                baseCleanUrl = window.location.href.split('?')[0].split('#')[0];
-            } catch (e) {}
-
-            // Truncate full report URL if it exceeds Discord's max URL limit
-            let validUrl = reportPortalUrl;
-            if (!validUrl || typeof validUrl !== 'string' || !validUrl.startsWith('http') || validUrl.length > 2000) {
-                validUrl = baseCleanUrl;
-            }
+            const locationFormatted = sanitize(`${address},${city} ${zip}\n*(${premise})*`, "Unspecified", 1000);
 
             // Build Discord Payload Embed with guaranteed non-empty fields
-            const cloudIdFieldVal = cloudDocId ? `☁️ **Cloud ID:** \`${cloudDocId}\` (Saved to Cloud)` : `🔗 **Portal Link**`;
+            const cloudIdFieldVal = cloudDocId ? `☁️ **Cloud ID:** \`${cloudDocId}\`` : `🔗 **Portal Link**`;
             const discordEmbed = {
                 title: `🚨 OFFICIAL LASD INCIDENT REPORT — URN: ${urn}`,
                 url: validUrl,
@@ -1355,7 +1358,7 @@
 
             const payload = {
                 username: "LASD Dispatch & Records Bot",
-                avatar_url: "https://upload.wikimedia.org/wikipedia/commons/2/27/Seal_of_the_Sheriff_of_Los_Angeles_County%2C_California.png",
+                avatar_url: "[https://upload.wikimedia.org/wikipedia/commons/2/27/Seal_of_the_Sheriff_of_Los_Angeles_County%2C_California.png](https://upload.wikimedia.org/wikipedia/commons/2/27/Seal_of_the_Sheriff_of_Los_Angeles_County%2C_California.png)",
                 embeds: [discordEmbed]
             };
 
